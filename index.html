@@ -1,107 +1,331 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Wind, ShieldAlert, CheckCircle, Info, RefreshCw } from 'lucide-react';
-
-const App = () => {
-  // Constants for air at 20°C
-  const GRAVITY = 9.81; // m/s^2
-  const RHO_AIR = 1.225; // kg/m^3
-  const MU_AIR = 0.0000181; // Pa·s (Dynamic viscosity)
-
-  // State for user inputs
-  const [roomHeight, setRoomHeight] = useState(2.5); // meters
-  const [targetTime, setTargetTime] = useState(60); // seconds
-  const [particleDensity, setParticleDensity] = useState(800); // kg/m^3
-  
-  // Real-life benchmarks
-  const benchmarks = [
-    { name: 'Propellant Spray (Fine)', size: 10, color: '#ef4444', desc: 'Highly respirable PM10, stays airborne 5+ mins' },
-    { name: 'Typical Aerosol (Avg)', size: 35, color: '#f59e0b', desc: 'Standard market spray, 1-2 min settling' },
-    { name: 'Pump Spray', size: 70, color: '#10b981', desc: 'Larger droplets, settles in < 30 seconds' },
-  ];
-
-  // Calculated values
-  const [idealDiameter, setIdealDiameter] = useState(0);
-  const [simParticles, setSimParticles] = useState([]);
-  const canvasRef = useRef(null);
-  const requestRef = useRef();
-
-  // Calculate Ideal Diameter based on Stokes' Law
-  useEffect(() => {
-    // vt = h / t
-    const vt = roomHeight / targetTime;
-    // d = sqrt( (18 * mu * vt) / (g * (rhoP - rhoAir)) )
-    const dMeters = Math.sqrt((18 * MU_AIR * vt) / (GRAVITY * (particleDensity - RHO_AIR)));
-    setIdealDiameter(dMeters * 1000000); // Convert to micrometers
-  }, [roomHeight, targetTime, particleDensity]);
-
-  // Simulation Logic
-  const resetSimulation = () => {
-    const newParticles = [];
-    // Create particles for each benchmark + the ideal one
-    const types = [...benchmarks, { name: 'Your Custom Setting', size: idealDiameter, color: '#3b82f6', isCustom: true }];
-    
-    types.forEach((type, idx) => {
-      for (let i = 0; i < 15; i++) {
-        const d_m = type.size / 1000000;
-        const vt = (GRAVITY * Math.pow(d_m, 2) * (particleDensity - RHO_AIR)) / (18 * MU_AIR);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deodorant Settling & VOC Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
         
-        newParticles.push({
-          x: 50 + (idx * 80) + (Math.random() * 40),
-          y: 20 + (Math.random() * 30),
-          baseY: 20,
-          velocity: vt * 50, // Scaled for visual speed
-          size: Math.max(2, type.size / 10),
-          color: type.color,
-          label: type.name,
-          diameter: type.size,
-          isSettled: false,
-          elapsed: 0
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+
+        .status-badge {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Deodorant Settling Analyzer</h1>
+                <p class="text-slate-500 text-sm mt-1">Physics-based simulation for indoor VOC pollution control.</p>
+            </div>
+            <div id="ideal-display" class="bg-blue-600 text-white px-6 py-3 rounded-2xl shadow-lg shadow-blue-200 flex flex-col items-center min-w-[160px]">
+                <span class="text-[10px] uppercase font-bold tracking-widest opacity-80">Ideal Diameter</span>
+                <span class="text-3xl font-black" id="val-diameter">0.0</span>
+                <span class="text-xs font-medium">µm (micrometers)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Sidebar Controls -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass-panel p-6 rounded-3xl shadow-sm space-y-6">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Environment Settings
+                    </h2>
+
+                    <div>
+                        <div class="flex justify-between text-sm font-semibold mb-2">
+                            <label>Room Height</label>
+                            <span class="text-blue-600" id="label-height">2.5m</span>
+                        </div>
+                        <input type="range" id="input-height" min="1" max="5" step="0.1" value="2.5">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-sm font-semibold mb-2">
+                            <label>Max Settling Time</label>
+                            <span class="text-blue-600" id="label-time">60s</span>
+                        </div>
+                        <input type="range" id="input-time" min="10" max="300" step="5" value="60">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-sm font-semibold mb-2">
+                            <label>Liquid Density</label>
+                            <span class="text-blue-600" id="label-density">800 kg/m³</span>
+                        </div>
+                        <input type="range" id="input-density" min="600" max="1200" step="10" value="800">
+                    </div>
+
+                    <button id="reset-sim" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Re-spray Simulation
+                    </button>
+                </div>
+
+                <!-- Pollution Warning -->
+                <div class="bg-amber-50 border border-amber-100 p-5 rounded-3xl flex gap-4">
+                    <div class="text-amber-500 mt-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-amber-900 uppercase tracking-tight">Pollution Warning</h4>
+                        <p class="text-xs text-amber-800 leading-relaxed mt-1">Particles below 20µm are highly respirable and stay suspended long enough to escape through open windows as outdoor VOC pollution.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Canvas & Results -->
+            <div class="lg:col-span-8 space-y-6">
+                <!-- Simulation -->
+                <div class="bg-slate-900 rounded-[2.5rem] p-6 shadow-2xl relative border-8 border-slate-800 overflow-hidden min-h-[400px]">
+                    <div class="absolute top-4 left-6 flex items-center gap-3">
+                        <div class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+                        <span class="text-[10px] font-mono text-slate-400 tracking-[0.2em] uppercase">Real-time Terminal Velocity Sim</span>
+                    </div>
+
+                    <canvas id="simCanvas" class="w-full h-[320px] mt-4"></canvas>
+
+                    <!-- Legend -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 border-t border-slate-800 pt-6">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-[#f43f5e]"></div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">Aerosol (12µm)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-[#fbbf24]"></div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">Spray (35µm)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-[#10b981]"></div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">Pump (75µm)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+                            <span class="text-[10px] text-white font-bold uppercase">Ideal Target</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparisons -->
+                <div id="benchmark-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Cards generated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants for Air Physics
+        const G = 9.81;            // gravity m/s^2
+        const RHO_AIR = 1.225;     // air density kg/m^3
+        const MU_AIR = 0.0000181;  // air viscosity Pa·s
+
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const benchmarks = [
+            { id: 'aero', name: 'Aerosol Spray', size: 12, color: '#f43f5e', desc: 'Stays airborne, low deposition.' },
+            { id: 'standard', name: 'Standard Spray', size: 35, color: '#fbbf24', desc: 'Average market nozzle size.' },
+            { id: 'pump', name: 'Pump Action', size: 75, color: '#10b981', desc: 'Eco-friendly rapid settling.' }
+        ];
+
+        let particles = [];
+        let idealSize = 0;
+        let animationId;
+
+        // UI Selectors
+        const inputs = {
+            height: document.getElementById('input-height'),
+            time: document.getElementById('input-time'),
+            density: document.getElementById('input-density')
+        };
+
+        const labels = {
+            height: document.getElementById('label-height'),
+            time: document.getElementById('label-time'),
+            density: document.getElementById('label-density'),
+            diameter: document.getElementById('val-diameter')
+        };
+
+        function calculateIdeal() {
+            const h = parseFloat(inputs.height.value);
+            const t = parseFloat(inputs.time.value);
+            const rho_p = parseFloat(inputs.density.value);
+
+            // Update Labels
+            labels.height.innerText = h + 'm';
+            labels.time.innerText = t + 's';
+            labels.density.innerText = rho_p + ' kg/m³';
+
+            // vt = h / t
+            const vtRequired = h / t;
+            
+            // Stokes' Law: d = sqrt( (18 * mu * vt) / (g * (rho_p - rho_air)) )
+            const d = Math.sqrt((18 * MU_AIR * vtRequired) / (G * (rho_p - RHO_AIR)));
+            idealSize = d * 1000000; // to micrometers
+            
+            labels.diameter.innerText = idealSize.toFixed(1);
+            
+            updateBenchmarkCards();
+        }
+
+        function updateBenchmarkCards() {
+            const container = document.getElementById('benchmark-container');
+            container.innerHTML = '';
+            
+            benchmarks.forEach(b => {
+                const diff = Math.abs(b.size - idealSize);
+                const efficiency = Math.max(0, 100 - (diff / idealSize * 100)).toFixed(0);
+                
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${b.size}µm</span>
+                            <span class="${b.size < 20 ? 'text-red-500' : 'text-emerald-500'}">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm mb-1">${b.name}</h3>
+                        <p class="text-[11px] text-slate-500 leading-snug">${b.desc}</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Settling Match</span>
+                        <span class="text-sm font-black text-slate-700">${efficiency}%</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function initParticles() {
+            particles = [];
+            const types = [...benchmarks, { name: 'Ideal', size: idealSize, color: '#3b82f6' }];
+            const rho_p = parseFloat(inputs.density.value);
+
+            types.forEach((type, groupIdx) => {
+                const count = groupIdx === 3 ? 20 : 10; // more particles for the "Ideal" line
+                for (let i = 0; i < count; i++) {
+                    const d_m = type.size / 1000000;
+                    const vt = (G * Math.pow(d_m, 2) * (rho_p - RHO_AIR)) / (18 * MU_AIR);
+                    
+                    particles.push({
+                        x: 80 + (groupIdx * (canvas.width / 4.5)) + (Math.random() * 30),
+                        y: 10 + (Math.random() * 40),
+                        v: vt * 80, // visual scaling
+                        size: Math.max(1, type.size / 12),
+                        color: type.color,
+                        settled: false
+                    });
+                }
+            });
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 48;
+            canvas.height = 320;
+            initParticles();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const floor = canvas.height - 30;
+
+            // Draw Ground Line
+            ctx.strokeStyle = '#1e293b';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(20, floor);
+            ctx.lineTo(canvas.width - 20, floor);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            particles.forEach(p => {
+                if (!p.settled) {
+                    p.y += p.v;
+                    if (p.y >= floor) {
+                        p.y = floor;
+                        p.settled = true;
+                    }
+                }
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.settled ? 0.3 : 1.0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Event Listeners
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', () => {
+                calculateIdeal();
+                // Subtle delay before re-spawning to avoid flicker
+                clearTimeout(window.reInitTimer);
+                window.reInitTimer = setTimeout(initParticles, 100);
+            });
         });
-      }
-    });
-    setSimParticles(newParticles);
-  };
 
-  useEffect(() => {
-    resetSimulation();
-  }, [idealDiameter]);
+        document.getElementById('reset-sim').addEventListener('click', initParticles);
 
-  // Canvas Animation Loop
-  const animate = (time) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+        window.addEventListener('resize', resizeCanvas);
 
-    // Draw Floor
-    ctx.strokeStyle = '#cbd5e1';
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height - 20);
-    ctx.lineTo(canvas.width, canvas.height - 20);
-    ctx.stroke();
+        // Bootstrap
+        calculateIdeal();
+        resizeCanvas();
+        animate();
 
-    setSimParticles(prev => prev.map(p => {
-      if (p.isSettled) {
-        // Draw settled particle
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, canvas.height - 20, p.size/2, 0, Math.PI * 2);
-        ctx.fill();
-        return p;
-      }
+    </script>
+</body>
+</html>
 
-      const newY = p.y + p.velocity;
-      if (newY >= canvas.height - 20) {
-        return { ...p, y: canvas.height - 20, isSettled: true };
-      }
 
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, newY, p.size, 0, Math.PI * 2);
-      ctx.fill();
-
-      return { ...p, y: newY };
-    }));
 
     requestRef.current = requestAnimationFrame(animate);
   };
