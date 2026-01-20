@@ -10,153 +10,135 @@
         
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
+            color: #1e293b;
         }
 
-        .calc-card {
-            background: #ffffff;
+        .calc-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+        }
+
+        .glass-card {
+            background: white;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
         }
 
-        .slider-thumb::-webkit-slider-thumb {
+        .slider-custom {
             -webkit-appearance: none;
-            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .slider-custom::-webkit-slider-thumb {
+            -webkit-appearance: none;
             width: 20px;
             height: 20px;
-            background: #2563eb;
+            background: #3b82f6;
             cursor: pointer;
             border-radius: 50%;
             border: 3px solid white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .sim-canvas {
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        .simulation-box {
+            background: radial-gradient(circle at top, #1e293b, #0f172a);
             border-radius: 1rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .result-highlight {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        #particleCanvas {
+            width: 100%;
+            height: 300px;
+            display: block;
         }
     </style>
 </head>
-<body class="min-h-screen py-8 px-4">
+<body class="p-4">
 
-    <div class="max-w-5xl mx-auto space-y-8">
-        <!-- Header Section -->
-        <header class="text-center space-y-2">
-            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Deodorant Particle Engineer</h1>
-            <p class="text-slate-500 max-w-2xl mx-auto">Calculate the optimal droplet diameter to ensure deodorant settles before VOCs escape into the ambient air, reducing indoor air pollution.</p>
+    <div class="calc-container space-y-6">
+        <!-- Header -->
+        <header class="text-center py-4">
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">VOC Particle Engineer</h1>
+            <p class="text-slate-500 mt-2">Design deodorant spray diameters to optimize indoor air quality.</p>
         </header>
 
-        <!-- Main Calculator Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- Input & Results Column -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left: Inputs & Primary Result -->
             <div class="lg:col-span-5 space-y-6">
-                
-                <!-- Input Panel -->
-                <section class="calc-card rounded-2xl p-6 space-y-6">
-                    <div class="flex items-center gap-2 border-b border-slate-100 pb-4">
-                        <div class="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                <div class="glass-card p-6 space-y-6">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Calculator Inputs
+                    </h2>
+
+                    <!-- Height -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between font-bold text-sm">
+                            <label>Release Height</label>
+                            <span class="text-blue-600" id="valHeight">2.5m</span>
                         </div>
-                        <h2 class="font-bold text-slate-800 uppercase tracking-wide text-sm">Input Parameters</h2>
+                        <input type="range" id="inputHeight" min="1.0" max="4.0" step="0.1" value="2.5" class="slider-custom">
                     </div>
 
-                    <div class="space-y-5">
-                        <!-- Room Height -->
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <label class="text-sm font-semibold text-slate-600">Release Height</label>
-                                <span class="text-sm font-bold text-blue-600" id="disp-height">2.5m</span>
-                            </div>
-                            <input type="range" id="in-height" min="1.0" max="4.0" step="0.1" value="2.5" class="w-full h-2 bg-slate-200 rounded-lg appearance-none slider-thumb">
+                    <!-- Time -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between font-bold text-sm">
+                            <label>Max Settling Time</label>
+                            <span class="text-blue-600" id="valTime">60s</span>
                         </div>
-
-                        <!-- Time to Settle -->
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <label class="text-sm font-semibold text-slate-600">Target Settling Time</label>
-                                <span class="text-sm font-bold text-blue-600" id="disp-time">60s</span>
-                            </div>
-                            <input type="range" id="in-time" min="5" max="300" step="5" value="60" class="w-full h-2 bg-slate-200 rounded-lg appearance-none slider-thumb">
-                        </div>
-
-                        <!-- Density -->
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <label class="text-sm font-semibold text-slate-600">Fluid Density</label>
-                                <span class="text-sm font-bold text-blue-600" id="disp-density">850 kg/m³</span>
-                            </div>
-                            <input type="range" id="in-density" min="600" max="1200" step="10" value="850" class="w-full h-2 bg-slate-200 rounded-lg appearance-none slider-thumb">
-                        </div>
+                        <input type="range" id="inputTime" min="5" max="300" step="5" value="60" class="slider-custom">
                     </div>
-                </section>
 
-                <!-- Calculation Result -->
-                <section class="result-highlight rounded-2xl p-8 text-white shadow-xl shadow-blue-200 text-center space-y-2">
-                    <p class="text-blue-100 text-xs font-bold uppercase tracking-[0.2em]">Required Settling Diameter</p>
-                    <div class="flex items-baseline justify-center gap-2">
-                        <span class="text-6xl font-black" id="result-val">0.0</span>
-                        <span class="text-xl font-medium opacity-80">µm</span>
+                    <!-- Density -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between font-bold text-sm">
+                            <label>Liquid Density</label>
+                            <span class="text-blue-600" id="valDensity">850 kg/m³</span>
+                        </div>
+                        <input type="range" id="inputDensity" min="600" max="1200" step="10" value="850" class="slider-custom">
                     </div>
-                    <p class="text-blue-100 text-[10px] leading-relaxed italic pt-4">Calculated via Stokes' Law: Terminal Velocity balancing Gravity & Drag</p>
-                </section>
+                </div>
+
+                <!-- Main Result Display -->
+                <div class="bg-blue-600 rounded-[1.5rem] p-8 text-white text-center shadow-xl shadow-blue-200">
+                    <p class="text-blue-100 text-xs font-bold uppercase tracking-widest mb-2">Optimal Settling Diameter</p>
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-6xl font-black" id="valIdeal">0.0</span>
+                        <span class="text-2xl font-medium opacity-80">µm</span>
+                    </div>
+                    <p class="mt-4 text-[10px] text-blue-200 uppercase tracking-tighter italic">Based on terminal velocity equilibrium</p>
+                </div>
             </div>
 
-            <!-- Visualization & Benchmarks Column -->
+            <!-- Right: Simulation & Benchmarks -->
             <div class="lg:col-span-7 space-y-6">
-                
-                <!-- Comparison Chart -->
-                <section class="calc-card rounded-2xl p-6">
-                    <h2 class="font-bold text-slate-800 uppercase tracking-wide text-sm mb-4">Industry Benchmarks</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="benchmark-grid">
-                        <!-- Cards added via JS -->
+                <!-- Simulation -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-bold text-slate-800 uppercase">Live Fallout Simulation</h2>
+                        <button onclick="resetSimulation()" class="text-blue-600 text-xs font-bold hover:underline">Re-Spray</button>
                     </div>
-                </section>
-
-                <!-- Fallout Simulator -->
-                <section class="calc-card rounded-2xl p-6 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-bold text-slate-800 uppercase tracking-wide text-sm">Fallout Simulation</h2>
-                        <button id="btn-refresh" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            Re-Spray
-                        </button>
-                    </div>
-                    
-                    <div class="relative">
-                        <canvas id="mainSim" class="w-full h-[300px] sim-canvas"></canvas>
-                        
-                        <!-- Legend -->
-                        <div class="absolute bottom-4 left-4 flex flex-wrap gap-4 bg-slate-900/50 backdrop-blur px-4 py-2 rounded-lg border border-slate-700/50">
-                            <div class="flex items-center gap-2 text-[10px] text-white">
-                                <span class="w-2 h-2 rounded-full bg-red-500"></span> Propellant (15µm)
-                            </div>
-                            <div class="flex items-center gap-2 text-[10px] text-white">
-                                <span class="w-2 h-2 rounded-full bg-amber-400"></span> Aerosol (35µm)
-                            </div>
-                            <div class="flex items-center gap-2 text-[10px] text-white">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Pump (75µm)
-                            </div>
-                            <div class="flex items-center gap-2 text-[10px] text-white font-bold">
-                                <span class="w-2 h-2 rounded-full bg-blue-400"></span> Optimized Target
-                            </div>
+                    <div class="simulation-box">
+                        <canvas id="particleCanvas"></canvas>
+                        <!-- Legend Overlay -->
+                        <div class="absolute bottom-4 left-4 flex flex-wrap gap-4 text-[9px] font-bold text-slate-300 bg-slate-900/40 p-2 rounded backdrop-blur-sm">
+                            <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Aerosol (15µm)</div>
+                            <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Standard (35µm)</div>
+                            <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Your Target</div>
                         </div>
                     </div>
-                </section>
+                </div>
 
-                <!-- Technical Advisory -->
-                <div class="flex gap-4 p-5 bg-slate-800 text-slate-200 rounded-2xl">
-                    <svg class="w-6 h-6 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <div class="space-y-1">
-                        <h4 class="text-sm font-bold text-white uppercase tracking-tight">Environmental Advisory</h4>
-                        <p class="text-xs opacity-80 leading-relaxed">
-                            To achieve "Pollution Neutral" status, deodorant manufacturers should calibrate spray nozzles to produce droplets > 60µm. Smaller particles create respirable VOC clouds that contribute to long-term indoor ozone depletion.
-                        </p>
-                    </div>
+                <!-- Comparison Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="benchmarkList">
+                    <!-- Cards injected by JS -->
                 </div>
             </div>
         </div>
@@ -164,546 +146,138 @@
 
     <script>
         // Physics Constants
-        const G = 9.81;            // gravity m/s^2
-        const RHO_AIR = 1.225;     // air density kg/m^3
-        const MU_AIR = 0.0000181;  // dynamic viscosity of air (Pa·s)
+        const G = 9.81;
+        const RHO_AIR = 1.225;
+        const MU_AIR = 0.0000181;
 
-        const canvas = document.getElementById('mainSim');
+        const canvas = document.getElementById('particleCanvas');
         const ctx = canvas.getContext('2d');
-        const benchmarkData = [
-            { name: 'Propellant', size: 15, color: '#ef4444', desc: 'Highly respirable, stays airborne.' },
-            { name: 'Standard', size: 35, color: '#fbbf24', desc: 'Standard market aerosol size.' },
-            { name: 'Pump Spray', size: 75, color: '#10b981', desc: 'Optimal for local deposition.' }
+        const benchmarks = [
+            { name: 'Propellant Aerosol', size: 15, color: '#ef4444', risk: 'High' },
+            { name: 'Standard Spray', size: 35, color: '#fbbf24', risk: 'Medium' }
         ];
 
         let particles = [];
-        let calculatedSize = 0;
-        let animFrame;
+        let idealSize = 0;
 
-        const inputs = {
-            height: document.getElementById('in-height'),
-            time: document.getElementById('in-time'),
-            density: document.getElementById('in-density')
-        };
-
-        const displays = {
-            height: document.getElementById('disp-height'),
-            time: document.getElementById('disp-time'),
-            density: document.getElementById('disp-density'),
-            result: document.getElementById('result-val')
+        // UI Binding
+        const el = {
+            inH: document.getElementById('inputHeight'),
+            inT: document.getElementById('inputTime'),
+            inD: document.getElementById('inputDensity'),
+            lblH: document.getElementById('valHeight'),
+            lblT: document.getElementById('valTime'),
+            lblD: document.getElementById('valDensity'),
+            lblIdeal: document.getElementById('valIdeal'),
+            benchmarks: document.getElementById('benchmarkList')
         };
 
         function calculate() {
-            const h = parseFloat(inputs.height.value);
-            const t = parseFloat(inputs.time.value);
-            const rho_p = parseFloat(inputs.density.value);
+            const h = parseFloat(el.inH.value);
+            const t = parseFloat(el.inT.value);
+            const rho_p = parseFloat(el.inD.value);
 
-            // Update Labels
-            displays.height.innerText = h + 'm';
-            displays.time.innerText = t + 's';
-            displays.density.innerText = rho_p + ' kg/m³';
+            el.lblH.innerText = h + 'm';
+            el.lblT.innerText = t + 's';
+            el.lblD.innerText = rho_p + ' kg/m³';
 
-            // Terminal Velocity needed: v = distance / time
+            // Terminal Velocity needed (v = h/t)
             const vtNeeded = h / t;
             
-            /**
-             * Stokes' Law: vt = [ g * d^2 * (rho_p - rho_air) ] / [ 18 * mu ]
-             * Solving for d:
-             * d = sqrt( (18 * mu * vt) / (g * (rho_p - rho_air)) )
-             */
-            const deltaRho = rho_p - RHO_AIR;
-            const d_meters = Math.sqrt((18 * MU_AIR * vtNeeded) / (G * deltaRho));
+            // Stokes' Law: d = sqrt( (18 * mu * vt) / (g * (rho_p - rho_air)) )
+            const d = Math.sqrt((18 * MU_AIR * vtNeeded) / (G * (rho_p - RHO_AIR)));
+            idealSize = d * 1000000;
             
-            calculatedSize = d_meters * 1000000; // Convert to micrometers
-            displays.result.innerText = calculatedSize.toFixed(1);
-            
-            updateBenchmarks();
+            el.lblIdeal.innerText = idealSize.toFixed(1);
+            updateCards();
         }
 
-        function updateBenchmarks() {
-            const grid = document.getElementById('benchmark-grid');
-            grid.innerHTML = '';
-            
-            benchmarkData.forEach(b => {
-                const dev = Math.abs(b.size - calculatedSize);
-                const match = Math.max(0, 100 - (dev / calculatedSize * 100)).toFixed(0);
-                
-                const card = document.createElement('div');
-                card.className = "p-4 rounded-xl border border-slate-100 bg-slate-50 flex flex-col justify-between";
-                card.innerHTML = `
-                    <div class="space-y-1">
-                        <div class="flex justify-between items-center">
+        function updateCards() {
+            el.benchmarks.innerHTML = benchmarks.map(b => {
+                const diff = Math.abs(b.size - idealSize);
+                const match = Math.max(0, 100 - (diff / idealSize * 100)).toFixed(0);
+                return `
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${b.size}µm</span>
-                            <div class="w-2 h-2 rounded-full" style="background:${b.color}"></div>
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase ${b.risk === 'High' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}">${b.risk} Risk</span>
                         </div>
-                        <h4 class="text-xs font-bold text-slate-800 uppercase">${b.name}</h4>
-                        <p class="text-[10px] text-slate-500 leading-tight">${b.desc}</p>
-                    </div>
-                    <div class="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase">Match Score</span>
-                        <span class="text-xs font-black text-slate-700">${match}%</span>
+                        <h4 class="text-xs font-bold mt-1">${b.name}</h4>
+                        <div class="mt-4 flex justify-between items-center border-t pt-2">
+                            <span class="text-[9px] text-slate-400 font-bold uppercase">Efficiency</span>
+                            <span class="text-xs font-black text-slate-700">${match}%</span>
+                        </div>
                     </div>
                 `;
-                grid.appendChild(card);
-            });
+            }).join('');
         }
 
-        function spawnParticles() {
+        function resetSimulation() {
             particles = [];
-            const rho_p = parseFloat(inputs.density.value);
-            const simulationTypes = [
-                ...benchmarkData,
-                { name: 'Target', size: calculatedSize, color: '#60a5fa' }
-            ];
+            const types = [...benchmarks, { name: 'Target', size: idealSize, color: '#60a5fa' }];
+            const rho_p = parseFloat(el.inD.value);
 
-            simulationTypes.forEach((type, idx) => {
-                // Number of particles per stream
+            types.forEach((type, idx) => {
                 for (let i = 0; i < 15; i++) {
                     const d_m = type.size / 1000000;
-                    // Physics velocity scaled for visual smoothness
                     const vt = (G * Math.pow(d_m, 2) * (rho_p - RHO_AIR)) / (18 * MU_AIR);
-                    
                     particles.push({
-                        x: 50 + (idx * (canvas.width / 4.5)) + (Math.random() * 40),
-                        y: 10 + (Math.random() * 60),
-                        v: vt * 100, // Visual scaling factor
+                        x: 40 + (idx * (canvas.width / 3.5)) + (Math.random() * 40),
+                        y: 10 + (Math.random() * 40),
+                        v: vt * 100, // scaled for display
                         size: Math.max(1.5, type.size / 12),
                         color: type.color,
-                        settled: false
+                        stopped: false
                     });
                 }
             });
         }
 
-        function animate() {
+        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const groundY = canvas.height - 30;
+            const floorY = canvas.height - 30;
 
-            // Ground Indicator
+            // Draw Ground
             ctx.strokeStyle = '#334155';
-            ctx.setLineDash([10, 5]);
-            ctx.beginPath();
-            ctx.moveTo(20, groundY);
-            ctx.lineTo(canvas.width - 20, groundY);
-            ctx.stroke();
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(10, floorY); ctx.lineTo(canvas.width - 10, floorY); ctx.stroke();
             ctx.setLineDash([]);
 
             particles.forEach(p => {
-                if (!p.settled) {
+                if (!p.stopped) {
                     p.y += p.v;
-                    if (p.y >= groundY) {
-                        p.y = groundY;
-                        p.settled = true;
-                    }
+                    if (p.y >= floorY) { p.y = floorY; p.stopped = true; }
                 }
-
                 ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.settled ? 0.3 : 1.0;
+                ctx.globalAlpha = p.stopped ? 0.4 : 1.0;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y - (p.settled ? p.size/2 : 0), p.size, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y - (p.stopped ? p.size/2 : 0), p.size, 0, Math.PI * 2);
                 ctx.fill();
             });
-
-            animFrame = requestAnimationFrame(animate);
+            requestAnimationFrame(draw);
         }
 
         function init() {
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = 300;
-            
             calculate();
-            spawnParticles();
-            if(!animFrame) animate();
+            resetSimulation();
         }
 
-        // Event Bindings
-        Object.values(inputs).forEach(input => {
-            input.addEventListener('input', () => {
+        [el.inH, el.inT, el.inD].forEach(i => {
+            i.addEventListener('input', () => {
                 calculate();
-                // Debounce particle respawn for performance
-                clearTimeout(window.reInit);
-                window.reInit = setTimeout(spawnParticles, 150);
+                clearTimeout(window.timer);
+                window.timer = setTimeout(resetSimulation, 200);
             });
         });
 
-        document.getElementById('btn-refresh').addEventListener('click', spawnParticles);
         window.addEventListener('resize', init);
-
         init();
-
+        draw();
     </script>
 </body>
 </html>
 
-
-                <!-- Pollution Warning -->
-                <div class="bg-amber-50 border border-amber-100 p-5 rounded-3xl flex gap-4">
-                    <div class="text-amber-500 mt-1">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-amber-900 uppercase tracking-tight">Pollution Warning</h4>
-                        <p class="text-xs text-amber-800 leading-relaxed mt-1">Particles below 20µm are highly respirable and stay suspended long enough to escape through open windows as outdoor VOC pollution.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Canvas & Results -->
-            <div class="lg:col-span-8 space-y-6">
-                <!-- Simulation -->
-                <div class="bg-slate-900 rounded-[2.5rem] p-6 shadow-2xl relative border-8 border-slate-800 overflow-hidden min-h-[400px]">
-                    <div class="absolute top-4 left-6 flex items-center gap-3">
-                        <div class="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-                        <span class="text-[10px] font-mono text-slate-400 tracking-[0.2em] uppercase">Real-time Terminal Velocity Sim</span>
-                    </div>
-
-                    <canvas id="simCanvas" class="w-full h-[320px] mt-4"></canvas>
-
-                    <!-- Legend -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 border-t border-slate-800 pt-6">
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#f43f5e]"></div>
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">Aerosol (12µm)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#fbbf24]"></div>
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">Spray (35µm)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#10b981]"></div>
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">Pump (75µm)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
-                            <span class="text-[10px] text-white font-bold uppercase">Ideal Target</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Comparisons -->
-                <div id="benchmark-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Cards generated by JS -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Constants for Air Physics
-        const G = 9.81;            // gravity m/s^2
-        const RHO_AIR = 1.225;     // air density kg/m^3
-        const MU_AIR = 0.0000181;  // air viscosity Pa·s
-
-        const canvas = document.getElementById('simCanvas');
-        const ctx = canvas.getContext('2d');
-        const benchmarks = [
-            { id: 'aero', name: 'Aerosol Spray', size: 12, color: '#f43f5e', desc: 'Stays airborne, low deposition.' },
-            { id: 'standard', name: 'Standard Spray', size: 35, color: '#fbbf24', desc: 'Average market nozzle size.' },
-            { id: 'pump', name: 'Pump Action', size: 75, color: '#10b981', desc: 'Eco-friendly rapid settling.' }
-        ];
-
-        let particles = [];
-        let idealSize = 0;
-        let animationId;
-
-        // UI Selectors
-        const inputs = {
-            height: document.getElementById('input-height'),
-            time: document.getElementById('input-time'),
-            density: document.getElementById('input-density')
-        };
-
-        const labels = {
-            height: document.getElementById('label-height'),
-            time: document.getElementById('label-time'),
-            density: document.getElementById('label-density'),
-            diameter: document.getElementById('val-diameter')
-        };
-
-        function calculateIdeal() {
-            const h = parseFloat(inputs.height.value);
-            const t = parseFloat(inputs.time.value);
-            const rho_p = parseFloat(inputs.density.value);
-
-            // Update Labels
-            labels.height.innerText = h + 'm';
-            labels.time.innerText = t + 's';
-            labels.density.innerText = rho_p + ' kg/m³';
-
-            // vt = h / t
-            const vtRequired = h / t;
-            
-            // Stokes' Law: d = sqrt( (18 * mu * vt) / (g * (rho_p - rho_air)) )
-            const d = Math.sqrt((18 * MU_AIR * vtRequired) / (G * (rho_p - RHO_AIR)));
-            idealSize = d * 1000000; // to micrometers
-            
-            labels.diameter.innerText = idealSize.toFixed(1);
-            
-            updateBenchmarkCards();
-        }
-
-        function updateBenchmarkCards() {
-            const container = document.getElementById('benchmark-container');
-            container.innerHTML = '';
-            
-            benchmarks.forEach(b => {
-                const diff = Math.abs(b.size - idealSize);
-                const efficiency = Math.max(0, 100 - (diff / idealSize * 100)).toFixed(0);
-                
-                const card = document.createElement('div');
-                card.className = "bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between";
-                card.innerHTML = `
-                    <div>
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${b.size}µm</span>
-                            <span class="${b.size < 20 ? 'text-red-500' : 'text-emerald-500'}">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                            </span>
-                        </div>
-                        <h3 class="font-bold text-slate-800 text-sm mb-1">${b.name}</h3>
-                        <p class="text-[11px] text-slate-500 leading-snug">${b.desc}</p>
-                    </div>
-                    <div class="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Settling Match</span>
-                        <span class="text-sm font-black text-slate-700">${efficiency}%</span>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function initParticles() {
-            particles = [];
-            const types = [...benchmarks, { name: 'Ideal', size: idealSize, color: '#3b82f6' }];
-            const rho_p = parseFloat(inputs.density.value);
-
-            types.forEach((type, groupIdx) => {
-                const count = groupIdx === 3 ? 20 : 10; // more particles for the "Ideal" line
-                for (let i = 0; i < count; i++) {
-                    const d_m = type.size / 1000000;
-                    const vt = (G * Math.pow(d_m, 2) * (rho_p - RHO_AIR)) / (18 * MU_AIR);
                     
-                    particles.push({
-                        x: 80 + (groupIdx * (canvas.width / 4.5)) + (Math.random() * 30),
-                        y: 10 + (Math.random() * 40),
-                        v: vt * 80, // visual scaling
-                        size: Math.max(1, type.size / 12),
-                        color: type.color,
-                        settled: false
-                    });
-                }
-            });
-        }
-
-        function resizeCanvas() {
-            const container = canvas.parentElement;
-            canvas.width = container.clientWidth - 48;
-            canvas.height = 320;
-            initParticles();
-        }
-
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const floor = canvas.height - 30;
-
-            // Draw Ground Line
-            ctx.strokeStyle = '#1e293b';
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(20, floor);
-            ctx.lineTo(canvas.width - 20, floor);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            particles.forEach(p => {
-                if (!p.settled) {
-                    p.y += p.v;
-                    if (p.y >= floor) {
-                        p.y = floor;
-                        p.settled = true;
-                    }
-                }
-
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.settled ? 0.3 : 1.0;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            animationId = requestAnimationFrame(animate);
-        }
-
-        // Event Listeners
-        Object.values(inputs).forEach(input => {
-            input.addEventListener('input', () => {
-                calculateIdeal();
-                // Subtle delay before re-spawning to avoid flicker
-                clearTimeout(window.reInitTimer);
-                window.reInitTimer = setTimeout(initParticles, 100);
-            });
-        });
-
-        document.getElementById('reset-sim').addEventListener('click', initParticles);
-
-        window.addEventListener('resize', resizeCanvas);
-
-        // Bootstrap
-        calculateIdeal();
-        resizeCanvas();
-        animate();
-
-    </script>
-</body>
-</html>
-
-
-
-    requestRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current);
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
-      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Sidebar: Controls */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Wind className="text-blue-500" /> Settling Diameter Calc
-            </h1>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-slate-600 block mb-1">Room Height (m)</label>
-                <input 
-                  type="range" min="1.5" max="4.0" step="0.1" 
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  value={roomHeight} onChange={(e) => setRoomHeight(parseFloat(e.target.value))}
-                />
-                <span className="text-xs font-bold text-blue-600">{roomHeight} meters</span>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-600 block mb-1">Target Settling Time (sec)</label>
-                <input 
-                  type="range" min="10" max="300" step="10" 
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  value={targetTime} onChange={(e) => setTargetTime(parseInt(e.target.value))}
-                />
-                <span className="text-xs font-bold text-blue-600">{targetTime} seconds</span>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-slate-600 block mb-1">Particle Density (kg/m³)</label>
-                <input 
-                  type="number" 
-                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"
-                  value={particleDensity} onChange={(e) => setParticleDensity(parseFloat(e.target.value))}
-                />
-              </div>
-
-              <button 
-                onClick={resetSimulation}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-200"
-              >
-                <RefreshCw size={18} /> Restart Simulation
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
-            <div className="flex items-center gap-2 mb-2 text-blue-800 font-bold">
-              <Info size={18} /> Resulting Target
-            </div>
-            <div className="text-3xl font-black text-blue-600">
-              {idealDiameter.toFixed(1)} <span className="text-lg font-normal">μm</span>
-            </div>
-            <p className="text-xs text-blue-700 mt-2 leading-relaxed">
-              Particles of this size will fall from {roomHeight}m and settle in {targetTime}s, 
-              minimizing VOC release to the wider environment.
-            </p>
-          </div>
-        </div>
-
-        {/* Main: Simulation & Comparisons */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Canvas Section */}
-          <div className="bg-slate-900 rounded-2xl p-4 shadow-xl overflow-hidden relative border-4 border-slate-800">
-            <div className="absolute top-4 left-4 z-10 text-white/50 text-[10px] font-mono tracking-widest uppercase">
-              Settling Velocity Simulation (Stokes' Law)
-            </div>
-            <canvas 
-              ref={canvasRef} 
-              width={600} 
-              height={300} 
-              className="w-full h-[300px] rounded-lg"
-            />
-            {/* Legend Overlay */}
-            <div className="grid grid-cols-4 gap-1 mt-2 text-[10px] text-white">
-               {benchmarks.map(b => (
-                 <div key={b.name} className="flex flex-col items-center">
-                    <div className="w-2 h-2 rounded-full mb-1" style={{backgroundColor: b.color}}></div>
-                    <span className="text-center opacity-70">{b.name}</span>
-                 </div>
-               ))}
-               <div className="flex flex-col items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-400 mb-1"></div>
-                  <span className="text-center opacity-70">Custom Target</span>
-               </div>
-            </div>
-          </div>
-
-          {/* Real Life Data Comparison */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <h2 className="text-lg font-bold mb-4">Real-World Comparisons</h2>
-            <div className="space-y-4">
-              {benchmarks.map((b) => (
-                <div key={b.name} className="flex gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50">
-                  <div className="flex-shrink-0">
-                    {b.size < 20 ? <ShieldAlert className="text-red-500" /> : <CheckCircle className="text-emerald-500" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold">{b.name}</span>
-                      <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">{b.size}μm</span>
-                    </div>
-                    <p className="text-sm text-slate-500">{b.desc}</p>
-                    <div className="mt-2 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 transition-all duration-1000" 
-                        style={{ width: `${Math.min(100, (b.size / idealDiameter) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Pollution Control Tip */}
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex gap-4">
-             <div className="bg-emerald-100 p-2 rounded-lg h-fit text-emerald-600">
-                <Wind size={20} />
-             </div>
-             <div>
-                <h4 className="font-bold text-emerald-900 text-sm">Indoor Pollution Strategy</h4>
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  To control VOCs, aim for a diameter <strong>{'>'} 50μm</strong>. These particles act as "Heavy Droplets"—they fall to the skin or floor before air currents can carry them into the room's ventilation, preventing outdoor VOC release.
-                </p>
-             </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default App;
-
