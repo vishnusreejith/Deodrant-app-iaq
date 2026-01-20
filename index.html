@@ -3,119 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOC & Droplet Analyzer</title>
+    <title>AeroSafe Indoor Deodorant Lab</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
-        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        canvas { border: 1px solid #ddd; background: #fafafa; border-radius: 8px; width: 100%; }
-        .controls { margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; }
-        .result-box { background: #e8f5e9; padding: 10px; border-radius: 5px; margin-top: 10px; font-weight: bold; border-left: 5px solid #4caf50; }
-        h2 { color: #2c3e50; margin-top: 0; }
-        label { font-size: 0.9em; color: #666; }
-        input { width: 100%; padding: 8px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+        :root { --primary: #2563eb; --danger: #dc2626; --safe: #16a34a; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .dashboard { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        .panel { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+        .canvas-container { display: grid; grid-template-rows: 1fr 1fr; gap: 20px; }
+        canvas { background: #000; border-radius: 8px; width: 100%; border: 1px solid #475569; }
+        
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+        input[type="range"] { width: 100%; accent-color: var(--primary); }
+        
+        .status-badge { padding: 10px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; }
+        .risk-high { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border: 1px solid var(--danger); }
+        .risk-low { background: rgba(22, 163, 74, 0.2); color: #86efac; border: 1px solid var(--safe); }
+        
+        h2, h3 { margin-top: 0; color: #fff; }
+        .stats { display: flex; justify-content: space-between; font-family: monospace; color: #38bdf8; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Deodorant VOC Impact Simulator</h2>
-    
-    <div class="controls">
-        <div style="display: flex; gap: 20px;">
-            <div style="flex: 1;">
-                <label>Droplet Diameter (μm):</label>
-                <input type="number" id="diameter" value="10" step="1">
-                <p style="font-size: 11px; color: #888;">*Smaller particles (<20μm) stay in air longer.</p>
-            </div>
-            <div style="flex: 1;">
-                <label>Initial Mist Amount (mg/m³):</label>
-                <input type="number" id="initialVOC" value="100">
-            </div>
+<div class="dashboard">
+    <div class="panel">
+        <h3>Room Parameters</h3>
+        <div id="riskLevel" class="status-badge risk-low">AIR QUALITY: SAFE</div>
+
+        <div class="control-group">
+            <label>Droplet Diameter (μm): <span id="val-d">20</span></label>
+            <input type="range" id="diameter" min="1" max="100" value="20">
         </div>
-        <button onclick="runSimulation()" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Run Analysis</button>
+
+        <div class="control-group">
+            <label>Windows / Ventilation (ACH): <span id="val-v">2</span></label>
+            <input type="range" id="vent" min="0" max="15" value="2">
+            <small style="font-size:10px; color:#64748b">0 = Closed, 15 = Heavy Draft</small>
+        </div>
+
+        <div class="control-group">
+            <label>Temperature (°C): <span id="val-t">25</span></label>
+            <input type="range" id="temp" min="10" max="45" value="25">
+        </div>
+
+        <div class="control-group">
+            <label>Relative Humidity (%): <span id="val-h">50</span></label>
+            <input type="range" id="hum" min="10" max="90" value="50">
+        </div>
+
+        <hr style="border: 0.5px solid #334155;">
+        
+        <div class="stats">
+            <span>Settling Vel:</span>
+            <span id="stat-vel">0.00 m/s</span>
+        </div>
+        <div class="stats">
+            <span>Deep Lung Risk:</span>
+            <span id="stat-lung">LOW</span>
+        </div>
     </div>
 
-    <div class="result-box" id="results">Velocity: -- m/s | Air Clearance: -- s</div>
-
-    <div class="grid-layout">
-        <div>
-            <h4>Droplet Fall Simulation</h4>
-            <canvas id="dropCanvas" height="300"></canvas>
+    <div class="canvas-container">
+        <div class="panel">
+            <label>Particle Trajectory (Effect of Wind + Gravity)</label>
+            <canvas id="simCanvas" height="250"></canvas>
         </div>
-        <div>
-            <h4>VOC Concentration Over Time</h4>
-            <canvas id="graphCanvas" height="300"></canvas>
+        <div class="panel">
+            <label>VOC Concentration Decay (Indoor Life-cycle)</label>
+            <canvas id="graphCanvas" height="200"></canvas>
         </div>
     </div>
 </div>
 
 <script>
-    const dCanvas = document.getElementById('dropCanvas');
-    const dCtx = dCanvas.getContext('2d');
-    const gCanvas = document.getElementById('graphCanvas');
-    const gCtx = gCanvas.getContext('2d');
+    const simCanvas = document.getElementById('simCanvas');
+    const sCtx = simCanvas.getContext('2d');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const gCtx = graphCanvas.getContext('2d');
 
-    function runSimulation() {
-        const d_microns = parseFloat(document.getElementById('diameter').value);
-        const initialVOC = parseFloat(document.getElementById('initialVOC').value);
-        
-        // Physics constants
-        const g = 9.81;
-        const d = d_microns / 1000000;
-        const eta = 0.0000181;
-        const rho_p = 800; // Average deodorant density
-        const rho_f = 1.225;
+    const inputs = ['diameter', 'vent', 'temp', 'hum'];
+    inputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', update);
+    });
 
-        // Stokes Velocity
-        const velocity = (g * Math.pow(d, 2) * (rho_p - rho_f)) / (18 * eta);
-        const clearanceTime = 2 / (velocity + 0.0001); // Time to fall 2 meters
+    function update() {
+        // Get values
+        const D = parseFloat(document.getElementById('diameter').value);
+        const V = parseFloat(document.getElementById('vent').value);
+        const T = parseFloat(document.getElementById('temp').value);
+        const H = parseFloat(document.getElementById('hum').value);
 
-        document.getElementById('results').innerText = 
-            `Settling Velocity: ${velocity.toExponential(3)} m/s | Est. Air Clearance: ${Math.round(clearanceTime)}s`;
+        // Update UI labels
+        inputs.forEach(id => document.getElementById(`val-${id.charAt(0)}`).innerText = document.getElementById(id).value);
 
-        drawSimulation(velocity);
-        drawGraph(velocity, initialVOC);
-    }
+        // Physics Calculation
+        const gravity = 9.81;
+        const airVisc = 0.000018 + (0.00000005 * (T - 20)); // Temp affects air viscosity
+        const particleDensity = 800 + (H * 0.5); // Humidity adds slight mass to droplet
+        const velocity = (gravity * Math.pow(D/1000000, 2) * particleDensity) / (18 * airVisc);
 
-    function drawSimulation(v) {
-        let y = 0;
-        function animate() {
-            dCtx.clearRect(0,0, dCanvas.width, dCanvas.height);
-            dCtx.fillStyle = "#3498db";
-            dCtx.beginPath();
-            dCtx.arc(dCanvas.width/2, y, 4, 0, Math.PI*2);
-            dCtx.fill();
-            
-            if(y < dCanvas.height - 10) {
-                y += (v * 500) + 0.2; // Visual scaling
-                requestAnimationFrame(animate);
-            }
+        document.getElementById('stat-vel').innerText = velocity.toFixed(4) + " m/s";
+
+        // Risk Logic
+        const badge = document.getElementById('riskLevel');
+        if (D < 10 || (V < 1 && D < 30)) {
+            badge.innerText = "AIR QUALITY: DANGEROUS";
+            badge.className = "status-badge risk-high";
+            document.getElementById('stat-lung').innerText = "HIGH";
+        } else {
+            badge.innerText = "AIR QUALITY: SAFE";
+            badge.className = "status-badge risk-low";
+            document.getElementById('stat-lung').innerText = "LOW";
         }
-        animate();
+
+        drawSim(velocity, V);
+        drawGraph(velocity, V);
     }
 
-    function drawGraph(v, startVal) {
-        gCtx.clearRect(0,0, gCanvas.width, gCanvas.height);
-        gCtx.strokeStyle = "#e74c3c";
-        gCtx.lineWidth = 2;
-        gCtx.beginPath();
-        gCtx.moveTo(0, gCanvas.height - (startVal));
+    function drawSim(vel, vent) {
+        sCtx.clearRect(0,0, simCanvas.width, simCanvas.height);
+        let x = 50, y = 20;
+        sCtx.strokeStyle = "#38bdf8";
+        sCtx.beginPath();
+        sCtx.moveTo(x, y);
 
-        for(let t = 0; t < gCanvas.width; t++) {
-            // Simple decay model: Concentration drops as particles settle
-            let decay = startVal * Math.exp(-v * t * 10); 
-            gCtx.lineTo(t, gCanvas.height - decay);
+        // Calculate path based on gravity (y) and ventilation drift (x)
+        for(let i=0; i<100; i++) {
+            x += vent * 2;
+            y += vel * 1000;
+            if(y < simCanvas.height - 10) sCtx.lineTo(x, y);
+        }
+        sCtx.stroke();
+        
+        // Ground
+        sCtx.fillStyle = "#334155";
+        sCtx.fillRect(0, simCanvas.height-10, simCanvas.width, 10);
+    }
+
+    function drawGraph(vel, vent) {
+        gCtx.clearRect(0,0, graphCanvas.width, graphCanvas.height);
+        gCtx.strokeStyle = "#10b981";
+        gCtx.beginPath();
+        gCtx.moveTo(0, graphCanvas.height);
+
+        // Combined removal rate (Settling + Ventilation)
+        const k = (vel * 500) + (vent * 0.1); 
+        
+        for(let t=0; t<graphCanvas.width; t++) {
+            let conc = 150 * Math.exp(-k * t / 100);
+            gCtx.lineTo(t, graphCanvas.height - conc);
         }
         gCtx.stroke();
-        
-        gCtx.fillStyle = "#666";
-        gCtx.fillText("Time (Seconds) →", gCanvas.width - 100, gCanvas.height - 5);
-        gCtx.fillText("Concentration (mg/m³)", 10, 20);
     }
 
-    runSimulation();
+    update();
 </script>
 </body>
 </html>
 
+        
