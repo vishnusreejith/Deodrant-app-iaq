@@ -1,0 +1,253 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Wind, ShieldAlert, CheckCircle, Info, RefreshCw } from 'lucide-react';
+
+const App = () => {
+  // Constants for air at 20°C
+  const GRAVITY = 9.81; // m/s^2
+  const RHO_AIR = 1.225; // kg/m^3
+  const MU_AIR = 0.0000181; // Pa·s (Dynamic viscosity)
+
+  // State for user inputs
+  const [roomHeight, setRoomHeight] = useState(2.5); // meters
+  const [targetTime, setTargetTime] = useState(60); // seconds
+  const [particleDensity, setParticleDensity] = useState(800); // kg/m^3
+  
+  // Real-life benchmarks
+  const benchmarks = [
+    { name: 'Propellant Spray (Fine)', size: 10, color: '#ef4444', desc: 'Highly respirable PM10, stays airborne 5+ mins' },
+    { name: 'Typical Aerosol (Avg)', size: 35, color: '#f59e0b', desc: 'Standard market spray, 1-2 min settling' },
+    { name: 'Pump Spray', size: 70, color: '#10b981', desc: 'Larger droplets, settles in < 30 seconds' },
+  ];
+
+  // Calculated values
+  const [idealDiameter, setIdealDiameter] = useState(0);
+  const [simParticles, setSimParticles] = useState([]);
+  const canvasRef = useRef(null);
+  const requestRef = useRef();
+
+  // Calculate Ideal Diameter based on Stokes' Law
+  useEffect(() => {
+    // vt = h / t
+    const vt = roomHeight / targetTime;
+    // d = sqrt( (18 * mu * vt) / (g * (rhoP - rhoAir)) )
+    const dMeters = Math.sqrt((18 * MU_AIR * vt) / (GRAVITY * (particleDensity - RHO_AIR)));
+    setIdealDiameter(dMeters * 1000000); // Convert to micrometers
+  }, [roomHeight, targetTime, particleDensity]);
+
+  // Simulation Logic
+  const resetSimulation = () => {
+    const newParticles = [];
+    // Create particles for each benchmark + the ideal one
+    const types = [...benchmarks, { name: 'Your Custom Setting', size: idealDiameter, color: '#3b82f6', isCustom: true }];
+    
+    types.forEach((type, idx) => {
+      for (let i = 0; i < 15; i++) {
+        const d_m = type.size / 1000000;
+        const vt = (GRAVITY * Math.pow(d_m, 2) * (particleDensity - RHO_AIR)) / (18 * MU_AIR);
+        
+        newParticles.push({
+          x: 50 + (idx * 80) + (Math.random() * 40),
+          y: 20 + (Math.random() * 30),
+          baseY: 20,
+          velocity: vt * 50, // Scaled for visual speed
+          size: Math.max(2, type.size / 10),
+          color: type.color,
+          label: type.name,
+          diameter: type.size,
+          isSettled: false,
+          elapsed: 0
+        });
+      }
+    });
+    setSimParticles(newParticles);
+  };
+
+  useEffect(() => {
+    resetSimulation();
+  }, [idealDiameter]);
+
+  // Canvas Animation Loop
+  const animate = (time) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Floor
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - 20);
+    ctx.lineTo(canvas.width, canvas.height - 20);
+    ctx.stroke();
+
+    setSimParticles(prev => prev.map(p => {
+      if (p.isSettled) {
+        // Draw settled particle
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, canvas.height - 20, p.size/2, 0, Math.PI * 2);
+        ctx.fill();
+        return p;
+      }
+
+      const newY = p.y + p.velocity;
+      if (newY >= canvas.height - 20) {
+        return { ...p, y: canvas.height - 20, isSettled: true };
+      }
+
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, newY, p.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      return { ...p, y: newY };
+    }));
+
+    requestRef.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    requestRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestRef.current);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Sidebar: Controls */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <h1 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Wind className="text-blue-500" /> Settling Diameter Calc
+            </h1>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">Room Height (m)</label>
+                <input 
+                  type="range" min="1.5" max="4.0" step="0.1" 
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  value={roomHeight} onChange={(e) => setRoomHeight(parseFloat(e.target.value))}
+                />
+                <span className="text-xs font-bold text-blue-600">{roomHeight} meters</span>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">Target Settling Time (sec)</label>
+                <input 
+                  type="range" min="10" max="300" step="10" 
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  value={targetTime} onChange={(e) => setTargetTime(parseInt(e.target.value))}
+                />
+                <span className="text-xs font-bold text-blue-600">{targetTime} seconds</span>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-600 block mb-1">Particle Density (kg/m³)</label>
+                <input 
+                  type="number" 
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm"
+                  value={particleDensity} onChange={(e) => setParticleDensity(parseFloat(e.target.value))}
+                />
+              </div>
+
+              <button 
+                onClick={resetSimulation}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-200"
+              >
+                <RefreshCw size={18} /> Restart Simulation
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+            <div className="flex items-center gap-2 mb-2 text-blue-800 font-bold">
+              <Info size={18} /> Resulting Target
+            </div>
+            <div className="text-3xl font-black text-blue-600">
+              {idealDiameter.toFixed(1)} <span className="text-lg font-normal">μm</span>
+            </div>
+            <p className="text-xs text-blue-700 mt-2 leading-relaxed">
+              Particles of this size will fall from {roomHeight}m and settle in {targetTime}s, 
+              minimizing VOC release to the wider environment.
+            </p>
+          </div>
+        </div>
+
+        {/* Main: Simulation & Comparisons */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Canvas Section */}
+          <div className="bg-slate-900 rounded-2xl p-4 shadow-xl overflow-hidden relative border-4 border-slate-800">
+            <div className="absolute top-4 left-4 z-10 text-white/50 text-[10px] font-mono tracking-widest uppercase">
+              Settling Velocity Simulation (Stokes' Law)
+            </div>
+            <canvas 
+              ref={canvasRef} 
+              width={600} 
+              height={300} 
+              className="w-full h-[300px] rounded-lg"
+            />
+            {/* Legend Overlay */}
+            <div className="grid grid-cols-4 gap-1 mt-2 text-[10px] text-white">
+               {benchmarks.map(b => (
+                 <div key={b.name} className="flex flex-col items-center">
+                    <div className="w-2 h-2 rounded-full mb-1" style={{backgroundColor: b.color}}></div>
+                    <span className="text-center opacity-70">{b.name}</span>
+                 </div>
+               ))}
+               <div className="flex flex-col items-center">
+                  <div className="w-2 h-2 rounded-full bg-blue-400 mb-1"></div>
+                  <span className="text-center opacity-70">Custom Target</span>
+               </div>
+            </div>
+          </div>
+
+          {/* Real Life Data Comparison */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <h2 className="text-lg font-bold mb-4">Real-World Comparisons</h2>
+            <div className="space-y-4">
+              {benchmarks.map((b) => (
+                <div key={b.name} className="flex gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50">
+                  <div className="flex-shrink-0">
+                    {b.size < 20 ? <ShieldAlert className="text-red-500" /> : <CheckCircle className="text-emerald-500" />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">{b.name}</span>
+                      <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">{b.size}μm</span>
+                    </div>
+                    <p className="text-sm text-slate-500">{b.desc}</p>
+                    <div className="mt-2 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 transition-all duration-1000" 
+                        style={{ width: `${Math.min(100, (b.size / idealDiameter) * 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pollution Control Tip */}
+          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex gap-4">
+             <div className="bg-emerald-100 p-2 rounded-lg h-fit text-emerald-600">
+                <Wind size={20} />
+             </div>
+             <div>
+                <h4 className="font-bold text-emerald-900 text-sm">Indoor Pollution Strategy</h4>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  To control VOCs, aim for a diameter <strong>{'>'} 50μm</strong>. These particles act as "Heavy Droplets"—they fall to the skin or floor before air currents can carry them into the room's ventilation, preventing outdoor VOC release.
+                </p>
+             </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
