@@ -3,163 +3,296 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AeroSafe Indoor Deodorant Lab</title>
+    <title>AeroSafe Pro: Indoor Deodorant Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --primary: #2563eb; --danger: #dc2626; --safe: #16a34a; }
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
-        .dashboard { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
-        .panel { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
-        .canvas-container { display: grid; grid-template-rows: 1fr 1fr; gap: 20px; }
-        canvas { background: #000; border-radius: 8px; width: 100%; border: 1px solid #475569; }
-        
-        .control-group { margin-bottom: 15px; }
-        label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
-        input[type="range"] { width: 100%; accent-color: var(--primary); }
-        
-        .status-badge { padding: 10px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; }
-        .risk-high { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border: 1px solid var(--danger); }
-        .risk-low { background: rgba(22, 163, 74, 0.2); color: #86efac; border: 1px solid var(--safe); }
-        
-        h2, h3 { margin-top: 0; color: #fff; }
-        .stats { display: flex; justify-content: space-between; font-family: monospace; color: #38bdf8; font-size: 14px; }
+        body { background-color: #05070a; color: #e6edf3; }
+        .glass { background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(10px); border: 1px solid #30363d; }
+        canvas { border-radius: 8px; background: #000; }
+        input[type="range"] { accent-color: #38bdf8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0d1117; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8 font-sans">
 
-<div class="dashboard">
-    <div class="panel">
-        <h3>Room Parameters</h3>
-        <div id="riskLevel" class="status-badge risk-low">AIR QUALITY: SAFE</div>
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-800 pb-6">
+            <div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                    AeroSafe Pro
+                </h1>
+                <p class="text-slate-400 text-sm">Indoor Deodorant Particulate & VOC Tracker</p>
+            </div>
+            <div id="statusBox" class="px-6 py-2 rounded-full border text-sm font-bold uppercase tracking-wider">
+                Checking Air Quality...
+            </div>
+        </header>
 
-        <div class="control-group">
-            <label>Droplet Diameter (μm): <span id="val-d">20</span></label>
-            <input type="range" id="diameter" min="1" max="100" value="20">
-        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Sidebar Controls -->
+            <aside class="lg:col-span-4 space-y-6">
+                <section class="glass p-6 rounded-2xl">
+                    <h2 class="text-lg font-semibold mb-4 text-blue-300">Environment Parameters</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <label>Droplet Diameter (μm)</label>
+                                <span id="val-diameter" class="text-blue-400">25</span>
+                            </div>
+                            <input type="range" id="diameter" min="2" max="150" value="25" class="w-full">
+                        </div>
 
-        <div class="control-group">
-            <label>Windows / Ventilation (ACH): <span id="val-v">2</span></label>
-            <input type="range" id="vent" min="0" max="15" value="2">
-            <small style="font-size:10px; color:#64748b">0 = Closed, 15 = Heavy Draft</small>
-        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <label>Ventilation (ACH)</label>
+                                <span id="val-vent" class="text-blue-400">2</span>
+                            </div>
+                            <input type="range" id="vent" min="0" max="20" value="2" class="w-full">
+                        </div>
 
-        <div class="control-group">
-            <label>Temperature (°C): <span id="val-t">25</span></label>
-            <input type="range" id="temp" min="10" max="45" value="25">
-        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <label>Temperature (°C)</label>
+                                <span id="val-temp" class="text-blue-400">22</span>
+                            </div>
+                            <input type="range" id="temp" min="10" max="45" value="22" class="w-full">
+                        </div>
 
-        <div class="control-group">
-            <label>Relative Humidity (%): <span id="val-h">50</span></label>
-            <input type="range" id="hum" min="10" max="90" value="50">
-        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <label>Humidity (%)</label>
+                                <span id="val-hum" class="text-blue-400">50</span>
+                            </div>
+                            <input type="range" id="hum" min="10" max="95" value="50" class="w-full">
+                        </div>
+                    </div>
 
-        <hr style="border: 0.5px solid #334155;">
-        
-        <div class="stats">
-            <span>Settling Vel:</span>
-            <span id="stat-vel">0.00 m/s</span>
-        </div>
-        <div class="stats">
-            <span>Deep Lung Risk:</span>
-            <span id="stat-lung">LOW</span>
+                    <div class="mt-8 pt-6 border-t border-slate-700 space-y-3">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500 text-xs">Settling Velocity</span>
+                            <span id="stat-vel" class="font-mono text-emerald-400">0.00 m/s</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500 text-xs">Air Viscosity (Pa·s)</span>
+                            <span id="stat-visc" class="font-mono text-emerald-400">1.8e-5</span>
+                        </div>
+                        <button onclick="logDataPoint()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all mt-4">
+                            LOG EXPERIMENT DATA
+                        </button>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Main Visuals -->
+            <main class="lg:col-span-8 space-y-6">
+                <!-- Top: Physics Sim -->
+                <div class="glass p-5 rounded-2xl relative">
+                    <div class="absolute top-8 right-8 text-[10px] text-slate-500 uppercase tracking-widest pointer-events-none">Kinematic Particle Flow</div>
+                    <canvas id="physicsCanvas" class="w-full h-64"></canvas>
+                </div>
+
+                <!-- Bottom: Data Visualization -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass p-5 rounded-2xl relative">
+                        <div class="absolute top-8 right-8 text-[10px] text-slate-500 uppercase tracking-widest pointer-events-none">VOC Concentration</div>
+                        <canvas id="graphCanvas" class="w-full h-48"></canvas>
+                    </div>
+                    
+                    <!-- Data Log Table -->
+                    <div class="glass p-5 rounded-2xl flex flex-col h-60">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Experimental Log</h3>
+                            <button onclick="downloadCSV()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white">EXPORT CSV</button>
+                        </div>
+                        <div class="overflow-y-auto custom-scrollbar flex-grow">
+                            <table class="w-full text-[10px] text-left">
+                                <thead class="text-slate-500 border-b border-slate-700">
+                                    <tr>
+                                        <th class="pb-2">Size (μm)</th>
+                                        <th class="pb-2">Temp</th>
+                                        <th class="pb-2">Vel (m/s)</th>
+                                        <th class="pb-2">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logTableBody" class="text-slate-300">
+                                    <!-- Logged rows appear here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
-    <div class="canvas-container">
-        <div class="panel">
-            <label>Particle Trajectory (Effect of Wind + Gravity)</label>
-            <canvas id="simCanvas" height="250"></canvas>
-        </div>
-        <div class="panel">
-            <label>VOC Concentration Decay (Indoor Life-cycle)</label>
-            <canvas id="graphCanvas" height="200"></canvas>
-        </div>
-    </div>
-</div>
-
-<script>
-    const simCanvas = document.getElementById('simCanvas');
-    const sCtx = simCanvas.getContext('2d');
-    const graphCanvas = document.getElementById('graphCanvas');
-    const gCtx = graphCanvas.getContext('2d');
-
-    const inputs = ['diameter', 'vent', 'temp', 'hum'];
-    inputs.forEach(id => {
-        document.getElementById(id).addEventListener('input', update);
-    });
-
-    function update() {
-        // Get values
-        const D = parseFloat(document.getElementById('diameter').value);
-        const V = parseFloat(document.getElementById('vent').value);
-        const T = parseFloat(document.getElementById('temp').value);
-        const H = parseFloat(document.getElementById('hum').value);
-
-        // Update UI labels
-        inputs.forEach(id => document.getElementById(`val-${id.charAt(0)}`).innerText = document.getElementById(id).value);
-
-        // Physics Calculation
-        const gravity = 9.81;
-        const airVisc = 0.000018 + (0.00000005 * (T - 20)); // Temp affects air viscosity
-        const particleDensity = 800 + (H * 0.5); // Humidity adds slight mass to droplet
-        const velocity = (gravity * Math.pow(D/1000000, 2) * particleDensity) / (18 * airVisc);
-
-        document.getElementById('stat-vel').innerText = velocity.toFixed(4) + " m/s";
-
-        // Risk Logic
-        const badge = document.getElementById('riskLevel');
-        if (D < 10 || (V < 1 && D < 30)) {
-            badge.innerText = "AIR QUALITY: DANGEROUS";
-            badge.className = "status-badge risk-high";
-            document.getElementById('stat-lung').innerText = "HIGH";
-        } else {
-            badge.innerText = "AIR QUALITY: SAFE";
-            badge.className = "status-badge risk-low";
-            document.getElementById('stat-lung').innerText = "LOW";
-        }
-
-        drawSim(velocity, V);
-        drawGraph(velocity, V);
-    }
-
-    function drawSim(vel, vent) {
-        sCtx.clearRect(0,0, simCanvas.width, simCanvas.height);
-        let x = 50, y = 20;
-        sCtx.strokeStyle = "#38bdf8";
-        sCtx.beginPath();
-        sCtx.moveTo(x, y);
-
-        // Calculate path based on gravity (y) and ventilation drift (x)
-        for(let i=0; i<100; i++) {
-            x += vent * 2;
-            y += vel * 1000;
-            if(y < simCanvas.height - 10) sCtx.lineTo(x, y);
-        }
-        sCtx.stroke();
+    <script>
+        const pCanvas = document.getElementById('physicsCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        const gCanvas = document.getElementById('graphCanvas');
+        const gCtx = gCanvas.getContext('2d');
         
-        // Ground
-        sCtx.fillStyle = "#334155";
-        sCtx.fillRect(0, simCanvas.height-10, simCanvas.width, 10);
-    }
+        const logData = [];
+        const inputs = ['diameter', 'vent', 'temp', 'hum'];
 
-    function drawGraph(vel, vent) {
-        gCtx.clearRect(0,0, graphCanvas.width, graphCanvas.height);
-        gCtx.strokeStyle = "#10b981";
-        gCtx.beginPath();
-        gCtx.moveTo(0, graphCanvas.height);
+        function init() {
+            // Set canvas resolution for crisp lines
+            pCanvas.width = pCanvas.offsetWidth;
+            pCanvas.height = pCanvas.offsetHeight;
+            gCanvas.width = gCanvas.offsetWidth;
+            gCanvas.height = gCanvas.offsetHeight;
 
-        // Combined removal rate (Settling + Ventilation)
-        const k = (vel * 500) + (vent * 0.1); 
-        
-        for(let t=0; t<graphCanvas.width; t++) {
-            let conc = 150 * Math.exp(-k * t / 100);
-            gCtx.lineTo(t, graphCanvas.height - conc);
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', () => {
+                    document.getElementById(`val-${id}`).innerText = document.getElementById(id).value;
+                    calculateAndRender();
+                });
+            });
+
+            calculateAndRender();
         }
-        gCtx.stroke();
-    }
 
-    update();
-</script>
+        function calculateAndRender() {
+            const D = parseFloat(document.getElementById('diameter').value);
+            const V = parseFloat(document.getElementById('vent').value);
+            const T = parseFloat(document.getElementById('temp').value);
+            const H = parseFloat(document.getElementById('hum').value);
+
+            // 1. Air Viscosity Calculation (Sutherland's Law Approximation)
+            // η = η0 * (T/T0)^1.5 * (T0+S)/(T+S)
+            const T_kelvin = T + 273.15;
+            const eta = 1.827e-5 * Math.pow(T_kelvin / 291.15, 1.5) * (291.15 + 120) / (T_kelvin + 120);
+            
+            // 2. Stokes Settling Velocity
+            const g = 9.81;
+            const rho_droplet = 850 + (H * 0.1); // Density increases slightly with humidity
+            const d_m = D / 1e6;
+            const velocity = (g * Math.pow(d_m, 2) * rho_droplet) / (18 * eta);
+
+            // Update UI
+            document.getElementById('stat-vel').innerText = velocity.toExponential(3) + " m/s";
+            document.getElementById('stat-visc').innerText = eta.toExponential(3);
+
+            // Risk Update
+            const statusBox = document.getElementById('statusBox');
+            if (D < 12) {
+                statusBox.innerText = "RISK: RESPIRABLE VOCs";
+                statusBox.className = "px-6 py-2 rounded-full border text-sm font-bold uppercase tracking-wider bg-red-900/20 text-red-400 border-red-500";
+            } else if (V < 1.5) {
+                statusBox.innerText = "RISK: STAGNANT AIR";
+                statusBox.className = "px-6 py-2 rounded-full border text-sm font-bold uppercase tracking-wider bg-yellow-900/20 text-yellow-400 border-yellow-500";
+            } else {
+                statusBox.innerText = "STATUS: SAFE PRECIPITATION";
+                statusBox.className = "px-6 py-2 rounded-full border text-sm font-bold uppercase tracking-wider bg-emerald-900/20 text-emerald-400 border-emerald-500";
+            }
+
+            renderPhysics(velocity, V);
+            renderGraph(velocity, V);
+        }
+
+        function renderPhysics(v, vent) {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            
+            // Grid
+            pCtx.strokeStyle = "#161b22";
+            pCtx.lineWidth = 1;
+            for(let i=0; i<pCanvas.width; i+=50) {
+                pCtx.beginPath(); pCtx.moveTo(i, 0); pCtx.lineTo(i, pCanvas.height); pCtx.stroke();
+            }
+
+            // Path simulation
+            pCtx.strokeStyle = "#38bdf8";
+            pCtx.lineWidth = 2;
+            pCtx.setLineDash([5, 5]);
+            pCtx.beginPath();
+            
+            let x = 50, y = 50;
+            pCtx.moveTo(x, y);
+
+            // Visual Scaling: multiply velocity by large factor to show movement
+            for(let i=0; i<500; i++) {
+                x += vent * 1.5; 
+                y += v * 80000;
+                if(y < pCanvas.height - 15) pCtx.lineTo(x, y);
+            }
+            pCtx.stroke();
+            pCtx.setLineDash([]);
+
+            // Nozzle
+            pCtx.fillStyle = "#334155";
+            pCtx.fillRect(40, 40, 20, 20);
+            
+            // Ground
+            pCtx.fillStyle = "#1e293b";
+            pCtx.fillRect(0, pCanvas.height-15, pCanvas.width, 15);
+        }
+
+        function renderGraph(v, vent) {
+            gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+            
+            // Axes
+            gCtx.strokeStyle = "#334155";
+            gCtx.beginPath();
+            gCtx.moveTo(30, 10); gCtx.lineTo(30, gCanvas.height-30); gCtx.lineTo(gCanvas.width-10, gCanvas.height-30);
+            gCtx.stroke();
+
+            // Decay Curve
+            gCtx.strokeStyle = "#f87171";
+            gCtx.beginPath();
+            const k = (v * 1000) + (vent * 0.1); // Decay rate constant
+            
+            for(let x=0; x < gCanvas.width - 40; x++) {
+                let y = (gCanvas.height - 50) * Math.exp(-k * x / 100);
+                if(x===0) gCtx.moveTo(30+x, (gCanvas.height-30) - y);
+                else gCtx.lineTo(30+x, (gCanvas.height-30) - y);
+            }
+            gCtx.stroke();
+        }
+
+        function logDataPoint() {
+            const row = {
+                size: document.getElementById('diameter').value,
+                temp: document.getElementById('temp').value,
+                vent: document.getElementById('vent').value,
+                vel: document.getElementById('stat-vel').innerText.split(' ')[0],
+                status: document.getElementById('statusBox').innerText.split(':')[1].trim()
+            };
+            logData.push(row);
+            
+            const tbody = document.getElementById('logTableBody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="py-2">${row.size}μm</td>
+                <td class="py-2">${row.temp}°C</td>
+                <td class="py-2 font-mono">${row.vel}</td>
+                <td class="py-2 ${row.status.includes('SAFE') ? 'text-emerald-400' : 'text-red-400'}">${row.status}</td>
+            `;
+            tbody.prepend(tr);
+        }
+
+        function downloadCSV() {
+            if(logData.length === 0) return alert("No data logged yet.");
+            
+            const headers = "Size(um),Temp(C),Vent(ACH),Velocity(m/s),Status\n";
+            const rows = logData.map(r => `${r.size},${r.temp},${r.vent},${r.vel},${r.status}`).join("\n");
+            const csvContent = "data:text/csv;charset=utf-8," + headers + rows;
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "deodorant_voc_report.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
 
-        
+
+            
