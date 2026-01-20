@@ -1,1 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOC & Droplet Analyzer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        canvas { border: 1px solid #ddd; background: #fafafa; border-radius: 8px; width: 100%; }
+        .controls { margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; }
+        .result-box { background: #e8f5e9; padding: 10px; border-radius: 5px; margin-top: 10px; font-weight: bold; border-left: 5px solid #4caf50; }
+        h2 { color: #2c3e50; margin-top: 0; }
+        label { font-size: 0.9em; color: #666; }
+        input { width: 100%; padding: 8px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Deodorant VOC Impact Simulator</h2>
+    
+    <div class="controls">
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <label>Droplet Diameter (μm):</label>
+                <input type="number" id="diameter" value="10" step="1">
+                <p style="font-size: 11px; color: #888;">*Smaller particles (<20μm) stay in air longer.</p>
+            </div>
+            <div style="flex: 1;">
+                <label>Initial Mist Amount (mg/m³):</label>
+                <input type="number" id="initialVOC" value="100">
+            </div>
+        </div>
+        <button onclick="runSimulation()" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Run Analysis</button>
+    </div>
+
+    <div class="result-box" id="results">Velocity: -- m/s | Air Clearance: -- s</div>
+
+    <div class="grid-layout">
+        <div>
+            <h4>Droplet Fall Simulation</h4>
+            <canvas id="dropCanvas" height="300"></canvas>
+        </div>
+        <div>
+            <h4>VOC Concentration Over Time</h4>
+            <canvas id="graphCanvas" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const dCanvas = document.getElementById('dropCanvas');
+    const dCtx = dCanvas.getContext('2d');
+    const gCanvas = document.getElementById('graphCanvas');
+    const gCtx = gCanvas.getContext('2d');
+
+    function runSimulation() {
+        const d_microns = parseFloat(document.getElementById('diameter').value);
+        const initialVOC = parseFloat(document.getElementById('initialVOC').value);
         
+        // Physics constants
+        const g = 9.81;
+        const d = d_microns / 1000000;
+        const eta = 0.0000181;
+        const rho_p = 800; // Average deodorant density
+        const rho_f = 1.225;
+
+        // Stokes Velocity
+        const velocity = (g * Math.pow(d, 2) * (rho_p - rho_f)) / (18 * eta);
+        const clearanceTime = 2 / (velocity + 0.0001); // Time to fall 2 meters
+
+        document.getElementById('results').innerText = 
+            `Settling Velocity: ${velocity.toExponential(3)} m/s | Est. Air Clearance: ${Math.round(clearanceTime)}s`;
+
+        drawSimulation(velocity);
+        drawGraph(velocity, initialVOC);
+    }
+
+    function drawSimulation(v) {
+        let y = 0;
+        function animate() {
+            dCtx.clearRect(0,0, dCanvas.width, dCanvas.height);
+            dCtx.fillStyle = "#3498db";
+            dCtx.beginPath();
+            dCtx.arc(dCanvas.width/2, y, 4, 0, Math.PI*2);
+            dCtx.fill();
+            
+            if(y < dCanvas.height - 10) {
+                y += (v * 500) + 0.2; // Visual scaling
+                requestAnimationFrame(animate);
+            }
+        }
+        animate();
+    }
+
+    function drawGraph(v, startVal) {
+        gCtx.clearRect(0,0, gCanvas.width, gCanvas.height);
+        gCtx.strokeStyle = "#e74c3c";
+        gCtx.lineWidth = 2;
+        gCtx.beginPath();
+        gCtx.moveTo(0, gCanvas.height - (startVal));
+
+        for(let t = 0; t < gCanvas.width; t++) {
+            // Simple decay model: Concentration drops as particles settle
+            let decay = startVal * Math.exp(-v * t * 10); 
+            gCtx.lineTo(t, gCanvas.height - decay);
+        }
+        gCtx.stroke();
+        
+        gCtx.fillStyle = "#666";
+        gCtx.fillText("Time (Seconds) →", gCanvas.width - 100, gCanvas.height - 5);
+        gCtx.fillText("Concentration (mg/m³)", 10, 20);
+    }
+
+    runSimulation();
+</script>
+</body>
+</html>
+
